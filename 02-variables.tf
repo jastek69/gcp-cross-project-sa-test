@@ -1,240 +1,107 @@
+# ==============================================================
+# variables.tf
+# Centralized variable definitions for Hub/Spoke VPN environment
+# ==============================================================
+
+#########################################
+# Bootstrap + impersonation
+#########################################
+
+# NOTE: bootstrap_mode is declared HERE: in 02-variables.tf
+# It toggles authentication mode:
+#   true  = ADC (Owner/dev)
+#   false = Impersonate Terraform SA
+############################################
 
 
-# Test Projects
-variable "balerica_project" {
-  description = "Balerica Inc, GCP Project ID"
+############################################
+# variables.tf
+############################################
+
+# Bootstrap toggle
+variable "bootstrap_mode" {
+  type        = bool
+  description = "true = ADC Owner (bootstrap), false = impersonate Terraform SAs"
+}
+
+# CICD account (owner email)
+variable "cicd_account" {
   type        = string
-  # default     = "taaops" # Your GCP Project ID{   
+  description = "CI/CD owner account for bootstrap mode (e.g. user:foo@gmail.com)"
 }
 
 
-variable "genosha_project" {
-  description = "Genosha Ops, GCP Project ID"
-  type        = string
-  # default     = "genosha-ops" # Your GCP Project ID
-}
+# ------------------------------
+# Projects
+# ------------------------------
+variable "balerica_project" { type = string }
+variable "balerica_region"  { type = string }
+variable "balerica_zone"    { type = string }
 
+variable "genosha_project"  { type = string }
+variable "genosha_region"   { type = string }
+variable "genosha_zone"     { type = string }
 
-
-
-
-# Test Regions
-variable "balerica_region" {
-  description = "Region for Balerica HA VPN"
-  type        = string
-}
-
-variable "genosha_region" {
-  description = "Region for Genosha HA VPN"
-  type        = string
-}
-
-
-# Service Accounts
+# ------------------------------
+# Terraform Service Accounts
+# ------------------------------
 variable "balerica_sa" {
   type        = string
-  description = "Service Account Email for Balerica"
-  default = ""
+  description = "Terraform SA for Balerica project"
 }
-
 
 variable "genosha_sa" {
   type        = string
-  description = "Service Account Email for Genosha"
-  default = ""
+  description = "Terraform SA for Genosha project"
+}
+
+# ------------------------------
+# Subnets
+# ------------------------------
+variable "subnet_cidrs" {
+  type        = map(string)
+  description = "Map of project → subnet CIDR"
+}
+
+# ------------------------------
+# Spokes
+# ------------------------------
+variable "spokes" {
+  type        = map(string)
+  description = "Map of project → Terraform SA"
+}
+
+variable "spoke_regions" {
+  type        = map(string)
+  description = "Map of project → region"
+}
+
+# ------------------------------
+# VPN Tunnels
+# ------------------------------
+variable "tunnels" {
+  description = "Map of HA VPN tunnel configs"
+  type = map(object({
+    src        = string
+    dst        = string
+    region_src = string
+    region_dst = string
+    asn_src    = number
+    asn_dst    = number
+    tunnels    = map(object({
+      psk     = string
+      ip_src  = string
+      ip_dst  = string
+    }))
+  }))
 }
 
 
 
-# BGP ASNs for Cloud Routers
-# These should be private ASNs in the range 64512 to 65534
-variable "balerica_bgp_asn" {
-  type        = number
-  description = "BGP ASN for Balerica Cloud Router"
+#########################################
+# Startup Scripts (per project)
+#########################################
+variable "startup_scripts" {
+  description = "Map of project → startup script path"
+  type        = map(string)
 }
-
-variable "genosha_bgp_asn" {
-  type        = number
-  description = "BGP ASN for Genosha Cloud Router"
-}
-
-
-# ================================
-# Tunnel 0 IP ranges (/30)
-# ================================
-variable "balerica_router_ip_tunnel0" {
-  type        = string
-  description = "Balerica router interface IP for tunnel0"
-  default     = "169.254.10.1/30"
-}
-
-variable "genosha_router_ip_tunnel0" {
-  type        = string
-  description = "Genosha router interface IP for tunnel0"
-  default     = "169.254.10.2/30"
-}
-
-# ================================
-# Tunnel 1 IP ranges (/30)
-# ================================
-variable "balerica_router_ip_tunnel1" {
-  type        = string
-  description = "Balerica router interface IP for tunnel1"
-  default     = "169.254.20.1/30"
-}
-
-variable "genosha_router_ip_tunnel1" {
-  type        = string
-  description = "Genosha router interface IP for tunnel1"
-  default     = "169.254.20.2/30"
-}
-
-
-
-
-
-
-
-
-# Pre-shared keys for VPN Tunnels
-# These should be set as sensitive variables and not hard-coded in the configuration files
-# Pre-shared key for Tunnel 0
-variable "tunnel0_psk" {
-  description = "Pre-shared key for HA VPN Tunnel 0"
-  type        = string
-  sensitive   = true
-}
-
-# Pre-shared key for Tunnel 1
-variable "tunnel1_psk" {
-  description = "Pre-shared key for HA VPN Tunnel 1"
-  type        = string
-  sensitive   = true
-}
-
-
-
-# JSON credentials paths
-variable "balerica_credentials_file" {
-  type        = string
-  description = "Path to Balerica service account JSON key file"
-}
-
-variable "genosha_credentials_file" {
-  type        = string
-  description = "Path to Genosha service account JSON key file"
-}
-
-
-
-# Template project variables
-variable "project_id1" {
-  description = "GCP Project ID"
-  type        = string
-  default     = "taaops" # Your GCP Project ID
-}
-
-variable "project_id2" {
-  description = "GCP Project ID"
-  type        = string
-  default     = "genosha-ops" # Your GCP Project ID
-}
-
-
-
-
-
-variable "tiqs_project" {
-  description = "TIQS, GCP Project ID"
-  type        = string
-  default     = "genosha-ops" # Your GCP Project ID
-}
-
-
-variable "tokyo_project" {
-  description = "Tokyo, GCP Project ID"
-  type        = string
-  default     = "taaops" # Your GCP Project ID  
-}
-
-
-
-
-# REGIONS and ZONES
-
-
-
-
-# SINGAPORE - region1 and zone1
-variable "region1" {
-  description = "GCP Region"
-  type        = string
-  default     = "asia-southeast1" # Singapore GCP Region
-}
-
-variable "zone1" {
-  description = "GCP Zone"
-  type        = string
-  default     = "asia-southeast1-a" # Singapore GCP Zone
-}
-
-
-
-# SAO PAULO - region2 and zone2
-variable "region2" {
-  description = "GCP Region"
-  type        = string
-  default     = "southamerica-east1" # Sao Paulo GCP Region
-}
-
-variable "zone2" {
-  description = "GCP Zone"
-  type        = string
-  default     = "southamerica-east1-a" # Sao Paulo GCP Zone
-}
-
-
-
-# TORONTO - region3 and zone3
-variable "region3" {
-  description = "GCP Region"
-  type        = string
-  default     = "northamerica-northeast1" # Toronto GCP Region
-
-}
-
-variable "zone3" {
-  description = "GCP Zone"
-  type        = string
-  default     = "northamerica-northeast1-a" # Toronto GCP Zone
-}
-
-
-
-
-#TOKYO - zone5
-variable "region5" {
-  description = "GCP Region"
-  type        = string
-  default     = "asia-northeast1" # Tokyo GCP Region  
-}
-
-variable "zone5" {
-  description = "GCP Zone"
-  type        = string
-  default     = "asia-northeast1-a" # Tokyo GCP Zone
-}
-
-
-
-
-/*
-
-# IAM Policies and Roles
-variable "iam_member" {
-description = "IAM member to grant roles"
-type        = string
-default     = "user:your-email@example.com"
-}
-
-*/

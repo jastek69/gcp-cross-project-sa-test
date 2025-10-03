@@ -1,0 +1,75 @@
+# ===========================================================
+# Terraform Bootstrap Makefile (with DEBUG flag)
+# ===========================================================
+
+# Variables
+BALERICA_PROJECT ?= taaops
+GENOSHA_PROJECT  ?= genosha-ops
+BALERICA_REGION  ?= asia-southeast1
+GENOSHA_REGION   ?= southamerica-east1
+
+# Debug flag (set DEBUG=true for verbose)
+DEBUG ?= false
+ifeq ($(DEBUG),true)
+  ECHO := @echo
+  QUIET :=
+else
+  ECHO := @echo "[HINT] Use DEBUG=true for more details"
+  QUIET := @
+endif
+
+# Colors
+RED    := $(shell tput setaf 1)
+GREEN  := $(shell tput setaf 2)
+YELLOW := $(shell tput setaf 3)
+RESET  := $(shell tput sgr0)
+
+# ===========================================================
+# Doctor checks - Bootstrap
+# ===========================================================
+doctor-bootstrap:
+	@echo "=== [DOCTOR] Checking Terraform bootstrap service accounts ==="
+
+	@echo "--- Balerica project ($(BALERICA_PROJECT)) ---"
+	$(QUIET) if gcloud iam service-accounts list --project $(BALERICA_PROJECT) \
+		--filter="email:terraform@$(BALERICA_PROJECT).iam.gserviceaccount.com" \
+		--format="value(email)" | grep -q "terraform@$(BALERICA_PROJECT).iam.gserviceaccount.com"; then \
+			echo "$(GREEN)[PASS]$(RESET) Found terraform@$(BALERICA_PROJECT).iam.gserviceaccount.com"; \
+		else \
+			echo "$(YELLOW)[WARN]$(RESET) Missing SA, creating..."; \
+			gcloud iam service-accounts create terraform \
+			  --display-name="terraform" \
+			  --project=$(BALERICA_PROJECT); \
+		fi; \
+		$(ECHO) "🔑 Ensuring minimal + baseline IAM roles..."; \
+		for role in roles/iam.serviceAccountAdmin \
+		            roles/iam.serviceAccountTokenCreator \
+		            roles/viewer \
+		            roles/compute.networkAdmin \
+		            roles/networkconnectivity.admin; do \
+			gcloud projects add-iam-policy-binding $(BALERICA_PROJECT) \
+			  --member="serviceAccount:terraform@$(BALERICA_PROJECT).iam.gserviceaccount.com" \
+			  --role="$$role" $(if $(filter true,$(DEBUG)),,--quiet) || true; \
+		done
+
+	@echo "--- Genosha project ($(GENOSHA_PROJECT)) ---"
+	$(QUIET) if gcloud iam service-accounts list --project $(GENOSHA_PROJECT) \
+		--filter="email:terraform@$(GENOSHA_PROJECT).iam.gserviceaccount.com" \
+		--format="value(email)" | grep -q "terraform@$(GENOSHA_PROJECT).iam.gserviceaccount.com"; then \
+			echo "$(GREEN)[PASS]$(RESET) Found terraform@$(GENOSHA_PROJECT).iam.gserviceaccount.com"; \
+		else \
+			echo "$(YELLOW)[WARN]$(RESET) Missing SA, creating..."; \
+			gcloud iam service-accounts create terraform \
+			  --display-name="terraform" \
+			  --project=$(GENOSHA_PROJECT); \
+		fi; \
+		$(ECHO) "🔑 Ensuring minimal + baseline IAM roles..."; \
+		for role in roles/iam.serviceAccountAdmin \
+		            roles/iam.serviceAccountTokenCreator \
+		            roles/viewer \
+		            roles/compute.networkAdmin \
+		            roles/networkconnectivity.admin; do \
+			gcloud projects add-iam-policy-binding $(GENOSHA_PROJECT) \
+			  --member="serviceAccount:terraform@$(GENOSHA_PROJECT).iam.gserviceaccount.com" \
+			  --role="$$role" $(if $(filter true,$(DEBUG)),,--quiet) || true; \
+		done
